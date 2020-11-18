@@ -1,0 +1,147 @@
+{
+  "$schema-template": "2.0.0",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "default": {
+                "address": "${CONTAINER_REGISTRY_SERVER}",
+                "username": "${CONTAINER_REGISTRY_USERNAME}",
+                "password": "${CONTAINER_REGISTRY_PASSWORD}"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": {}
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "EdgeBlobUploadFunction": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.EdgeBlobUploadFunction}",
+              "createOptions": {
+                "Env": [
+                  "AZUREWEBJOBSSTORAGE=UseDevelopmentStorage=true",
+                  "EDGESTORAGE=DefaultEndpointsProtocol=http;BlobEndpoint=http://EdgeBlobStorage:11002/${LOCAL_STORAGE_ACCOUNT_NAME};AccountName=${LOCAL_STORAGE_ACCOUNT_NAME};AccountKey=${LOCAL_STORAGE_ACCOUNT_KEY};",
+                  "FUNCTIONS_WORKER_RUNTIME=dotnet"
+                ],
+                "HostConfig": {
+                  "PortBindings": {
+                    "80/tcp": [
+                      {
+                        "HostPort": "7071"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "EdgeBlobStorage": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azure-blob-storage:latest",
+              "createOptions": {
+                "Env":[
+                  "LOCAL_STORAGE_ACCOUNT_NAME=${LOCAL_STORAGE_ACCOUNT_NAME}",
+                  "LOCAL_STORAGE_ACCOUNT_KEY=${LOCAL_STORAGE_ACCOUNT_KEY}"
+                ],
+                "HostConfig": {
+                  "Binds": [
+                    "/data/blobroot:/blobroot"
+                  ],
+                  "PortBindings": {
+                    "11002/tcp": [
+                      {
+                        "HostPort": "11002"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "default": "FROM /messages/* INTO $upstream"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "EdgeBlobStorage": {
+      "properties.desired": {
+        "deviceAutoDeleteProperties": {
+          "deleteOn": false,
+          "deleteAfterMinutes": 240,
+          "retainWhileUploading": true
+        },
+        "deviceToCloudUploadProperties": {
+          "uploadOn": true,
+          "uploadOrder": "oldestFirst",
+          "cloudStorageConnectionString": "${CLOUD_STORAGE_CONNECTION_STRING}",
+          "storageContainersForUpload": {
+            "edgeupload": {
+              "target": "edgeupload"
+            }
+          },
+          "deleteAfterUpload": true
+        }
+      }
+    }
+  }
+}

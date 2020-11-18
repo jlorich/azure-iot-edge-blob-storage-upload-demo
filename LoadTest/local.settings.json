@@ -1,0 +1,7 @@
+{
+    "LoadTestUri": "http://52.175.209.129:7071/api/upload/{fileName}",
+    "LoadTestFilePath": "10mb.test",
+    "ConcurrentClientCount": 10,
+    "Duration": 90,
+    "RandomizeFileName": true
+}
